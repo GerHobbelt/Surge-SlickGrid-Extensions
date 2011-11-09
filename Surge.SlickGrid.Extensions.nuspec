@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>Surge.SlickGrid.Extensions</id>
+    <version>1.0.1</version>
+    <title>SlickGrid and Surge SlickGrid Extensions</title>
+    <authors>Surge Consulting Group</authors>
+    <owners>Surge Consulting Group</owners>
+    <licenseUrl>https://github.com/surgeforward/Surge-SlickGrid-Extensions/blob/master/Surge.SlickGrid.Extensions-license.txt</licenseUrl>
+    <projectUrl>http://github.com/surgeforward/Surge-SlickGrid-Extensions</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>The Surge SlickGrid Extensions is a set of open-sourced tools that will make using grids in your application a breeze.</description>
+    <summary>Super-powered jQuery Ui Widget for interacting with the SlickGrid javascript grid.</summary>
+    <language>en-US</language>
+    <tags>jQuery jQueryUI plugins widgets grid javascript</tags>
+    <dependencies>
+      <dependency id="jQuery" version="1.4.4" />
+      <dependency id="jQuery.UI.Combined" version="1.8.16" />
+    </dependencies>
+  </metadata>
+</package>
