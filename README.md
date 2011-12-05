@@ -35,7 +35,7 @@ Always check the browser console log for errors that might occur due to missing 
 References
 ==========
  * [Surge Consulting Group](http://www.surgeforward.com/)
- * [Introductory Tutorial Index](http://blog.surgeforward.com/node/17)
+ * [Introductory Tutorial Index](https://github.com/surgeforward/Surge-SlickGrid-Extensions/wiki/Announcing-Surge-Slickgrid-Extensions)
  * [SlickGrid Extensions Demo](http://platformdemo.surgeforward.com/Grid/)
  * [Surge API Reference](http://docs.surgeforward.com/Javascript/files/surge-slickGrid-js.html)
  * [Original SlickGrid Documentation](http://github.com/mleibman/SlickGrid/wiki)

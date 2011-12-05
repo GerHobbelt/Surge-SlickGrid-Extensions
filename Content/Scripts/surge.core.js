@@ -101,56 +101,56 @@
 	});
 
 	Define('Surge', {
-	// Function: Surge.Class
-	// Defines a new class. Details TBD.
-	//
-	// Example:
-	// (code)
-	// Class("MyApp.NiftyThing", Surge.Component, {
-	//   MyProperty: new Surge.Property(), // auto property
-	//   MyTrackedProperty: new Surge.Property({changeTracked: true}), // see below
-	//
-	//   constructor: function (myProperty) {
-	//     this.setMyProperty(myProperty); // setter is defined automatically
-	//   },
-	//
-	//   someMethod: function () {
-	//     return this.getMyProperty() * 100;
-	//   },
-	//
-	//   $staticMethod: function () {
-	//     alert("It's super effective!");
-	//   }
-	// });
-	//
-	// var instance = new MyApp.NiftyThing(10);
-	// alert(instance.someMethod());
-	// MyApp.NiftyThing.staticMethod();
-	// instance.listen('valueChanged', function (propertyName, oldValue, newValue) {
-	//   alert(newValue);
-	// });
-	// instance.setMyTrackedProperty(7);
-	// (end)
-			Class: Class,
-			// Function: Surge.Define
-			//
-			// Adds a dictionary of items at a named location, creating any intermediate objects required.
-			//
-			// Parameters:
-			//  ns - The name of a namespace. This should be a dotted list of components, e.g. Surge.Math.Geometry.
-			//  dict - An object. Each property of the object will be added to the namespace referenced by ns.
-			//
-			// Example:
-			// (begin code)
-			// Define("Foo.Bar", {
-			//     hello: function () {
-			//         alert("Hello, World!");
-			//     }
-			// });
-			//
-			// Foo.Bar.hello();
-			// (end)
-			Define: Define
+		// Function: Class
+		// Defines a new class. Details TBD.
+		//
+		// Example:
+		// (code)
+		// Class("MyApp.NiftyThing", Surge.Component, {
+		//   MyProperty: new Surge.Property(), // auto property
+		//   MyTrackedProperty: new Surge.Property({changeTracked: true}), // see below
+		//
+		//   constructor: function (myProperty) {
+		//     this.setMyProperty(myProperty); // setter is defined automatically
+		//   },
+		//
+		//   someMethod: function () {
+		//     return this.getMyProperty() * 100;
+		//   },
+		//
+		//   $staticMethod: function () {
+		//     alert("It's super effective!");
+		//   }
+		// });
+		//
+		// var instance = new MyApp.NiftyThing(10);
+		// alert(instance.someMethod());
+		// MyApp.NiftyThing.staticMethod();
+		// instance.listen('valueChanged', function (propertyName, oldValue, newValue) {
+		//   alert(newValue);
+		// });
+		// instance.setMyTrackedProperty(7);
+		// (end)
+		Class: Class,
+		// Function: Define
+		//
+		// Adds a dictionary of items at a named location, creating any intermediate objects required.
+		//
+		// Parameters:
+		//  ns - The name of a namespace. This should be a dotted list of components, e.g. Surge.Math.Geometry.
+		//  dict - An object. Each property of the object will be added to the namespace referenced by ns.
+		//
+		// Example:
+		// (begin code)
+		// Define("Foo.Bar", {
+		//     hello: function () {
+		//         alert("Hello, World!");
+		//     }
+		// });
+		//
+		// Foo.Bar.hello();
+		// (end)
+		Define: Define
 	});
 
 
