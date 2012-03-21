@@ -142,7 +142,7 @@
 		//
 		// Example:
 		// (begin code)
-		// Define("Foo.Bar", {
+		// Surge.Define("Foo.Bar", {
 		//     hello: function () {
 		//         alert("Hello, World!");
 		//     }
@@ -421,7 +421,7 @@
 	// This prevents fatal exceptions from occuring in code in some browsers.
 	//
 	// Surge.Console.log and Surge.Console.error are aliased as _log and _error.
-	Define("Surge.Console", {
+    Surge.Define("Surge.Console", {
 			_backlog: [],
 			_groupDepth: 0, // Used by software emulated begin/end group
 			_times: {},
