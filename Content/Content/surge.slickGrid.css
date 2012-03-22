@@ -1,3 +1,7 @@
+.surge-slickGrid-loaded-marker {
+  z-index: -98256;
+  display: none; }
+
 [data-widget=slickGrid] table {
   display: none; }
 
@@ -24,6 +28,12 @@
   height: 200px;
   background: #fff;
   clear: both; }
+  .sfx-grid div {
+    box-sizing: content-box;
+    -moz-box-sizing: content-box;
+    -webkit-box-sizing: content-box;
+    -khtml-box-sizing: content-box;
+    -o-box-sizing: content-box; }
   .sfx-grid .slick-header-column, .sfx-grid .slick-header-columns {
     background: #eee none !important;
     color: #000 !important; }

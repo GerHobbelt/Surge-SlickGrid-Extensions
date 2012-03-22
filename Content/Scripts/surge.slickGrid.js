@@ -77,7 +77,8 @@
     //     data                     - The data source for the grid. This should be an array of rows that matches the format specified by your column definitions.
     //     noSearch                 - (default false) Prevents this column from being included in gridtextsearch if set to true.
     //	   headerTmpl				- jQuery selector for jQuery Template that will produce the grid header. Requires <surge.jQuery.templates>
-    //	   headerTmpl				- jQuery selector for jQuery Template that will produce the grid footer. Requires <surge.jQuery.templates>
+    //	   footerTmpl				- jQuery selector for jQuery Template that will produce the grid footer. Requires <surge.jQuery.templates>
+    //     escapeHtml               - (default true) Escape html when no formatter is provided
     //
     // Group: Editing and Formatting
     // Cell editing and formatting.
@@ -292,10 +293,7 @@
 		    var result = new Date(date);
 		    result.setMinutes(result.getMinutes() + result.getTimezoneOffset());
 		    return result;
-		}),
-		rxEscape = function (text) {
-		    return text.replace(/[-[\]{}()*+?.,\\^$|#]/g, "\\$&");
-		};
+		})
 
     if (!$.widget && Console && Console.error) {
         return Console.error("Surge SlickGrid Extensions interact with the jQuery Ui Widget system yet a reference to it was not found.");
@@ -319,7 +317,7 @@
     // - <SlickGrid at http://github.com/mleibman/SlickGrid/wiki>
     $.widget("surge.slickGrid", {
         widgetEventPrefix: "grid",
-        options: { data: [], columns: [], multiSelect: false },
+        options: { data: [], columns: [], multiSelect: false, escapeHtml: true },
         _create: function () {
             var self = this,
 				headerRow = this.element.children("table").find("tr:eq(1)"),
@@ -342,15 +340,22 @@
 
             this._grid = new Slick.Grid(this._gridElement, this.options.data, this.options.columns, this.options);
 
+            if (this.options.autoHeight)
+                this._gridElement.css("height", "auto");
+
             if (headerRow.length)
                 this.buildHeaderRow(headerRow);
 
+            // Compatibility
             if (Slick.Event && !this._grid.getHeaderRow) {
                 _log("warning: Slick.Event is present, but SlickGrid 2.0 is not loaded. Assuming SlickGrid 1.x behavior.");
                 self._slickGridV2 = false;
             } else if (Slick.Event) {
                 self._slickGridV2 = true;
             }
+
+            if (this._grid.getCurrentCell)
+                this._grid.getActiveCell = this._grid.getCurrentCell;
 
             function mapV2Event(name, fn) {
                 var eventMap = {
@@ -453,6 +458,16 @@
                 self._trigger("cellclick", e, { row: row, cell: cell, column: column });
             });
 
+            subscribe('onDblClick', function (e, row, cell) {
+                var column = self.options.columns[cell];
+
+                if (column && column.onDblClick)
+                    column.onDblClick.call(self.element, {
+                        row: row, cell: cell, column: column
+                    });
+                self._trigger("celldoubleclick", e, { row: row, cell: cell, column: column });
+            });
+
             subscribe('onCellChange', function (row, cell, item) {
                 var column = self.options.columns[cell];
 
@@ -510,44 +525,14 @@
                 return true;
             });
 
-            this.element.bind("gridtextsearch.platform", function (e, searchText) {
-                // Ensure we copy a copy of the original data, and operate on a clone of the array.
-                var data = self.options.originalData;
-                if (!data)
-                    data = self.options.originalData = self._grid.getData();
-                data = data.slice(0);
-
-                // Perform the filtering.
-                if (!_.isEmpty(searchText)) {
-                    var matchedRows = [];
+            if ($.surge.slickGrid.findIn && $.surge.slickGrid.findIn.call) {
+                this.element.bind("gridtextsearch.platform", function (e, searchText) {
+                    var data = self._grid.getData();
                     var columns = self._grid.getColumns();
-                    var split = rxEscape(searchText).split(" ");
-
-                    var regexes = [];
-                    for (index in split) {
-                        var regex = new RegExp(split[index], "im")
-                        regex.compile(regex.source, "im");
-                        regexes.push(regex);
-                    }
-
-                    $.each(data, function (index, row) {
-                        $.each(columns, function (key, column) {
-                            if (!(column.noSearch === true)) {
-                                var cell = row[column.field];
-                                var type = typeof cell;
-                                if ((type === "string" || type === "number") && !_.isEmpty(cell) && _.all(regexes, function (regex) { return cell.match(regex); })) {
-                                    matchedRows.push(row);
-                                    return false;
-                                }
-                            }
-                        });
-                    });
-
-                    data = matchedRows;
-                }
-
-                self.data(data);
-            });
+                    var matches = $.surge.slickGrid.findIn(data, searchText, columns);
+                    self.data(matches);
+                });
+            }
         },
 
         destroy: function () {
@@ -589,6 +574,9 @@
                         })).html();
                     };
 
+                if (!formatter && $.surge.slickGrid.escapeHtml && self.options.escapeHtml !== false)
+                    formatter = function (row, cell, value) { return typeof value === "undefined" || value === null ? "" : $.surge.slickGrid.escapeHtml(value); };
+
                 var col = { minWidth: 0 };
 
                 if (th.data("special"))
@@ -598,16 +586,18 @@
 
                 $.extend(col, {
                     id: th.data("id"),
-                    name: html && html.length ? html : undefined,
+                    name: html && html.length ? $.trim(html) : undefined,
                     field: th.data("field") || th.data("id"),
-                    formatter: formatter,
+                    formatter: col.formatter || formatter,
                     editor: editor,
                     width: th.data("width"),
+                    originalWidth: th.data("width"),
                     minWidth: th.data("minWidth"),
                     maxWidth: th.data("maxWidth"),
-                    cssClass: th.data("cssClass"),
+                    cssClass: th.data("cssClass") || th.data("cssclass"),
                     sortable: th.data("sortable"),
                     behavior: th.data("behavior"),
+                    toolTip: th.data("toolTip"),
                     unselectable: th.data("unselectable"),
                     options: options,
                     resizable: th.data("resizable"),
@@ -667,7 +657,7 @@
         // Method: specialColumn
         // Return the column overrides expressed by the special column mechanism. See <$.surge.slickGrid.specialColumns>
         specialColumn: function (colType, colFunction) {
-            var col = $.surge.slickGrid.specialColumns[colType]
+            var col = $.surge.slickGrid.specialColumns[colType];
             return col && col(colFunction);
         },
 
@@ -678,8 +668,18 @@
         // Method: resize
         // Recalculate the widget's size.
         resize: function () {
-            if (this.options.forceFitColumns)
+            if (this.options.forceFitColumns) {
+                this._grid.resizeCanvas();
+
+                for (var i = 0; i < this.options.columns.length; ++i) {
+                    var col = this.options.columns[i];
+
+                    if (col.originalWidth)
+                        col.width = col.originalWidth;
+                }
+
                 this._grid.autosizeColumns();
+            }
 
             this._grid.resizeCanvas();
         },
@@ -699,6 +699,12 @@
                 return this.element;
             }
             return this._grid.getData();
+        },
+
+        // Method: runFilters
+        // Resets the grid data, ensuring any changed filters are applied.
+        runFilters: function () {
+            this.data(this.options.data);
         },
 
         // Method: selection
@@ -787,7 +793,7 @@
     // - <surge.core>
     // - <jQuery at http://jquery.com>
     // - <SlickGrid at http://github.com/mleibman/SlickGrid/wiki>
-    Class("Surge.SlickGrid.JSONDataSource", Surge.Component, {
+    Surge.Class("Surge.SlickGrid.JSONDataSource", Surge.Component, {
         // Property: Url
         // A string specifying the URL from which to load data.
         Url: new Surge.Property(),
@@ -899,7 +905,7 @@
     // #region Standard set of Formaters provided by Surge
 
     // Namespace: Surge.SlickGrid
-    Define("Surge.SlickGrid", {
+    Surge.Define("Surge.SlickGrid", {
         // Function: HiddenFormatter
         // Formatter which returns nothing.
         HiddenFormatter: function (row, cell, value, columnDef, dataContext) {
@@ -938,6 +944,16 @@
         // - <jQuery.globalize at http://wiki.jqueryui.com/w/page/39118647/Globalize>
         TimeFormatter: function (row, cell, value, columnDef, dataContext) {
             return value !== undefined ? applyFormat(utcToLocalTime(value), "t") : "";
+        },
+
+        // Function: DurationFormatter
+        // Formatter function which presents duration values in a grid.  Time is stored
+        // as an integer in milliseconds since midnight.
+        //
+        // Depends On:
+        // - surge.datetime.js
+        DurationFormatter: function (row, cell, value, columnDef, dataContext) {
+            return value !== undefined ? applyFormat($.formatDuration(value), "hms") : "";
         },
 
         // Function: DateFormatter
@@ -987,7 +1003,7 @@
     // and saving the data from the underlying row, as well as managing UI elements.
     //
     // Cell editors have a well defined lifecycle. [[TBD]]
-    Class("Surge.SlickGrid.CellEditor", Surge.Component, {
+    Surge.Class("Surge.SlickGrid.CellEditor", Surge.Component, {
         // Property: Grid
         // The grid with which this cell editor is associated.
         Grid: new Surge.Property(),
@@ -1073,7 +1089,7 @@
     // Class: Surge.SlickGrid.TimeEditor
     // A cell editor which allows the user to edit a time value. The time
     // is stored as an integer in milliseconds since midnight.
-    Class("Surge.SlickGrid.TimeEditor", Surge.SlickGrid.CellEditor, {
+    Surge.Class("Surge.SlickGrid.TimeEditor", Surge.SlickGrid.CellEditor, {
         _initialize: function () {
             if (!$.fn.timeEntry)
                 return Console.error("TimeEditor requires the jQuery timeEntry plugin but it was not found");
@@ -1112,7 +1128,7 @@
     // Depends On:
     // - <jQuery Ui Datepicker at http://jqueryui.com/demos/datepicker/>
     // - <jQuery.globalize at http://wiki.jqueryui.com/w/page/39118647/Globalize>
-    Class("Surge.SlickGrid.DateEditor", Surge.SlickGrid.CellEditor, {
+    Surge.Class("Surge.SlickGrid.DateEditor", Surge.SlickGrid.CellEditor, {
         _initialize: function () {
             var self = this;
             this._input = $("<INPUT type=text class='editor-text' />");
@@ -1159,7 +1175,10 @@
 
         loadValue: function (item) {
             var defaultValue = this._defaultValue = item[this.getColumn().field];
-            this._input.val(applyFormat(defaultValue instanceof Date ? defaultValue : new Date(defaultValue), "d"));
+            if (defaultValue)
+                this._input.val(applyFormat(defaultValue instanceof Date ? defaultValue : new Date(defaultValue), "d"));
+            else
+                this._input.val('');
             this._input[0].defaultValue = defaultValue;
             this._input.select();
         },
@@ -1180,7 +1199,7 @@
     // which form a range of time. The two fields are specified by setting the
     // column's field property to a comma-separated string, e.g. data-field="MyTimeStart,MyTimeEnd".
     // The string must not contain spaces.
-    Class("Surge.SlickGrid.TimeRangeEditor", Surge.SlickGrid.CellEditor, {
+    Surge.Class("Surge.SlickGrid.TimeRangeEditor", Surge.SlickGrid.CellEditor, {
         _initialize: function () {
             var self = this;
 
@@ -1254,7 +1273,7 @@
     });
 
 
-    Class("Surge.SlickGrid.PasswordEditor", Surge.SlickGrid.CellEditor, {
+    Surge.Class("Surge.SlickGrid.PasswordEditor", Surge.SlickGrid.CellEditor, {
         _initialize: function () {
             this._input = $("<input type='password' class='surge-cell-password'/>").appendTo(this.getContainer()).focus().select();
         },
@@ -1275,11 +1294,35 @@
         }
     });
 
+    Surge.Class("Surge.SlickGrid.DurationEditor", Surge.SlickGrid.CellEditor, {
+        _initialize: function () {
+            this._input = $('<input type="text" />').appendTo(this.getContainer()).focus().select();
+        },
+
+        focus: function () { this._input.focus(); },
+        destroy: function () { this._input.remove(); },
+
+        serializeValue: function () {
+            return Surge.Date.parseDuration(this._input.val());
+        },
+
+        loadValue: function (item) {
+            var val = $.formatDuration(item[this.getColumn().field]);
+            this._input.val(val);
+            this._originalValue = val;
+        },
+
+        isValueChanged: function () {
+            var val = this.serializeValue();
+            return val != this._originalValue;
+        }
+    });
+
     // #endregion Standard set of editors provided by Surge
 
     // #region Useful Editors from SlickGrid Sample Editors
 
-    Define('Surge.SlickGrid', {
+    Surge.Define('Surge.SlickGrid', {
         // Function: TextCellEditor
         // Edit field with an text input.
         // Originally from SlickGrid Sample Editors.
@@ -1350,21 +1393,21 @@
         * Originally from SlickGrid Sample Editors.
         */
         LongTextCellEditor: function (args) {
-            var $input, $wrapper;
-            var defaultValue;
-            var scope = this;
+            var $input, $wrapper, defaultValue;
+            var scope = this,
+                grid = args.grid;
 
             this.init = function () {
                 var $container = $("body");
 
                 $wrapper = $("<DIV style='z-index:10000;position:absolute;background:white;padding:5px;border:3px solid gray; -moz-border-radius:10px; border-radius:10px;'/>")
-					.appendTo($container);
+                    .appendTo($container);
 
                 $input = $("<TEXTAREA hidefocus rows=5 style='backround:white;width:250px;height:80px;border:0;outline:0'>")
-					.appendTo($wrapper);
+                    .appendTo($wrapper);
 
                 $("<DIV style='text-align:right'><BUTTON>Save</BUTTON><BUTTON>Cancel</BUTTON></DIV>")
-					.appendTo($wrapper);
+                    .appendTo($wrapper);
 
                 $wrapper.find("button:first").bind("click", this.save);
                 $wrapper.find("button:last").bind("click", this.cancel);
@@ -1411,8 +1454,8 @@
 
             this.position = function (position) {
                 $wrapper
-					.css("top", position.top - 5)
-					.css("left", position.left - 5)
+                    .css("top", position.top - 5)
+                    .css("left", position.left - 5)
             };
 
             this.destroy = function () {
@@ -1750,8 +1793,34 @@
 
     // #region formatter aliases and special column extension point
 
-   // Namespace: $.surge.slickGrid
+    // Namespace: $.surge.slickGrid
     $.extend($.surge.slickGrid, {
+        
+
+        // Function: escapeHtml
+        // Function to be used for escaping html with the signature
+        // (code)
+        // function (term) {
+        //   ..
+        //   return htmlEscapedTerm;    
+        // }
+        // (end)
+        // A default implementation is provided
+        escapeHtml: Surge.String && Surge.String.escapeHtml ||  function(term) {
+            return (term + "").replace(/[&<>"'`]/g, function(t) { return "&#" + t.charCodeAt(0) + ";"; });
+        },
+
+        // Function: findIn
+        // Function to be used for built-in search. It should be of the format
+        // (code)
+        // function (rows, searchText, columns) {
+        //   ..
+        //   return matchedRows;    
+        // }
+        // (end)
+        // A default implementation is provided in the optional surge.utility.js
+        findIn: Surge.Utility && Surge.Utility.findIn,
+
         // Object: formatters
         // These are aliases for formatters that can easily be set up and referenced throughout your project in markup rather than having to use the fully qualified object name
         // Currently available date, time, timeRange, hidden, 2decimal
@@ -1778,7 +1847,8 @@
         //	more commonly this will simply set up the corresponding UI. You may add special columns by adding a new key to this object. The object returned by the
         //  corresponding function is used to extend the default SlickGrid column options.
         //
-        //	delete - Creates a formatted column with a default icon. Bind to the "gridcellclick" event to wire up delete logic. 
+        //	delete - Creates a formatted column with a trash icon. Bind to the "gridcellclick" event to wire up delete logic.
+        //  edit   - Creates a formatted column with a pencil icon.  Bind to the "gridcellclick" event to wire up edit logic. 
         //	reorder - Creates a column that allows reordering of rows with the mouse. This will actually impelment drag-drop of rows, 
         //				only the column UI for it. To implement bind to the the "gridrowmove" event. 
         //				If you are using v2 you must remember to include rowmovemanager.v2.js.
@@ -1804,6 +1874,14 @@
                     }
                 };
             },
+            "edit": function () {
+                return {
+                    id: "edit-column", width: 26, minWidth: 26, maxWidth: 26, unselectable: true,
+                    formatter: function (row, cell, value, columnDef, dataContext) {
+                        return "<a href='javascript:void(0)' class='ui-icon ui-icon-pencil'></a>";
+                    }
+                };
+            },
             "newDeleteColumn": function () { return $.surge.slickGrid.specialColumns['delete'].apply(this, arguments); },
             "reorder": function () {
                 return { id: "resize-column", width: 26, minWidth: 26, maxWidth: 26, behavior: "selectAndMove", unselectable: true, resizable: false, cssClass: "dnd",
@@ -1824,6 +1902,6 @@
         }
     });
 
-    // #endregion formatter aliases and special column extesnion point
+    // #endregion formatter aliases and special column extension point
 
 })(jQuery);
