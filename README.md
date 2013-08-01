@@ -2,7 +2,7 @@ About
 =====
 The Surge SlickGrid Extensions provided by the Surge Consulting Group is a set of open-sourced tools that will make using grids in your application a breeze. The product can be conceptually broken down into the following:
 
-* A jQuery widget which wraps the open-source SlickGrid tool and gives an api for working with it that is more natural to a jQuery user. This includes the ability to define grid columns in mark-up.
+* A jQuery widget which wraps the open-source [SlickGrid tool](https://github.com/mleibman/SlickGrid) and gives an api for working with it that is more natural to a jQuery user. This includes the ability to define grid columns in mark-up.
 * Various extensions that add some nice bits of functionality to the widget. Including:
   * Use jQuery Templates for Headers, Footers, and formatting columns
   * JSONDataSource object to easily support bottomless scrolling
